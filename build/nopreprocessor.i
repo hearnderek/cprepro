@@ -1,10 +1,10 @@
-# 1 "./src/nocomments.c"
+# 1 "./src/nopreprocessor.c"
 # 1 "<built-in>" 1
 # 1 "<built-in>" 3
 # 370 "<built-in>" 3
 # 1 "<command line>" 1
 # 1 "<built-in>" 2
-# 1 "./src/nocomments.c" 2
+# 1 "./src/nopreprocessor.c" 2
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 1 3 4
 # 64 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 1 3 4
@@ -531,7 +531,7 @@ extern int __vsprintf_chk (char * restrict, int, size_t,
 extern int __vsnprintf_chk (char * restrict, size_t, int, size_t,
        const char * restrict, va_list);
 # 400 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 2 3 4
-# 2 "./src/nocomments.c" 2
+# 2 "./src/nopreprocessor.c" 2
 
 
 
@@ -543,15 +543,32 @@ main(int argc, char * argv[]) {
 
 
     char* unused = "/* you should see the \"//\" in this string */";
+    int inPreprocessorLine = 0;
     int inMultiLineComment = 0;
     int inSingleLineComment = 0;
     int inString = 0;
     int inChar = 0;
-# 34 "./src/nocomments.c"
+# 36 "./src/nopreprocessor.c"
     char prev = (-1);
     char cur;
 
     while( (cur = getchar()) != (-1) ) {
+
+
+        if( ((prev=='\n'||prev==(-1))&&cur=='#'&&!inMultiLineComment) ) {
+            inPreprocessorLine = 1;
+            if( prev != (-1) ) {
+                putchar(prev);
+            }
+            prev = (-1);
+        }
+        if ( inPreprocessorLine ) {
+            if (cur == '\n') {
+                inPreprocessorLine = 0;
+            }
+            continue;
+        }
+
 
 
         if( ((!inString&&!inChar)&&prev=='/'&&cur=='/') ){
@@ -561,52 +578,43 @@ main(int argc, char * argv[]) {
             inMultiLineComment = 1;
         }
 
+        if( prev != (-1) ) {
+            putchar(prev);
+        }
+
         if( (inMultiLineComment||inSingleLineComment) ) {
 
 
             if( (prev=='*'&&cur=='/') ) {
                 inMultiLineComment = 0;
-                cur = (-1);
             }
             else if( (cur=='\n') ) {
                 inSingleLineComment = 0;
-
-
             }
         } else {
+            if ( (!inString&&!inChar&&cur=='"') ) {
+                inString = 1;
+            }
+            else if ( (!inString&&!inChar&&cur=='\'') ) {
+                inChar = 1;
+            }
+            else if( inString && ((prev!='\\'&&cur=='"')||cur=='\n') ) {
+                inString = 0;
+            }
+            else if( inChar && ((prev!='\\'&&cur=='\'')||cur=='\n') ) {
 
 
 
-
-
-           if( prev != (-1) ) {
-               putchar(prev);
-           }
-
-
-           if ( (!inString&&!inChar&&cur=='"') ) {
-               inString = 1;
-           }
-           else if ( (!inString&&!inChar&&cur=='\'') ) {
-               inChar = 1;
-           }
-           else if( inString && ((prev!='\\'&&cur=='"')||cur=='\n') ) {
-               inString = 0;
-           }
-           else if( inChar && ((prev!='\\'&&cur=='\'')||cur=='\n') ) {
-
-
-
-               inChar = 0;
-           }
+                inChar = 0;
+            }
         }
         prev = cur;
     }
 
 
-    if( !(inMultiLineComment||inSingleLineComment) && prev != (-1) ) {
+    if( prev != (-1) ) {
         putchar(prev);
     }
     return 0;
-# 104 "./src/nocomments.c"
+# 113 "./src/nopreprocessor.c"
 }

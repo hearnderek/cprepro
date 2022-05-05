@@ -10,6 +10,7 @@ main(int argc, char * argv[]) {
 
     // Purely here for ease of self test ability
     char* unused = "/* you should see the \"//\" in this string */";
+    bool inPreprocessorLine = false;
     bool inMultiLineComment = false;
     bool inSingleLineComment = false;
     bool inString = false;
@@ -29,65 +30,73 @@ main(int argc, char * argv[]) {
 #define endChar ((prev!='\\'&&cur=='\'')||cur=='\n')
 #define enterString (!inString&&!inChar&&cur=='"')
 #define enterChar (!inString&&!inChar&&cur=='\'')
+#define enterPreprocessor ((prev=='\n'||prev==EOF)&&cur=='#'&&!inMultiLineComment)
 
     /* prev will always have cur's last value */
     char prev = EOF;
     char cur;
 
     while( (cur = getchar()) != EOF ) {
-        /* all comments start with two characters, so we don't want to accidently
-         * put prev in the below if {} else { ... } block */
+
+        /* Everything should be basically the same as nocomments.c except for this bit */
+        if( enterPreprocessor ) {
+            inPreprocessorLine = true;
+            if( prev != EOF ) {
+                putchar(prev); 
+            }
+            prev = EOF;
+        }
+        if ( inPreprocessorLine ) {
+            if (cur == '\n') {
+                inPreprocessorLine = false;
+            }
+            continue;
+        }
+        /* Finished with new bit */
+
+
         if( enterSingleLineComment ){
             inSingleLineComment = true;
         }
         else if( enterMultiLineComment ){
             inMultiLineComment = true;
         }
-        
+
+        if( prev != EOF ) {
+            putchar(prev); 
+        }
+
         if( inComment ) {
             /* print nothing because that's the whole point of this program... 
              * filtering out comments */
             if( endMultiLineComment ) {
                 inMultiLineComment = false;
-                cur = EOF; /* Stops us from printing the final '/' */
             }
             else if( endSingleLineComment ) {
                 inSingleLineComment = false;
-                /* Note: We want to print this current char (newline) since there may
-                 * have been some whitespace putted before we entered the comment */
             }
         } else {
-           /* We're printing the prev character because we don't know if we should print
-            * a / until we've read the next character
-            * but we need to deal with first itteration not being set yet.
-            * and we've then overloaded the EOF character to mean don't print
-            * which gets used when ending a multiline comment */
-           if( prev != EOF ) {
-               putchar(prev); 
-           }
-
-
-           if ( enterString ) {
-               inString = true;
-           }
-           else if ( enterChar ) {
-               inChar = true;
-           }
-           else if( inString && endString ) {
-               inString = false;
-           }
-           else if( inChar && endChar ) {
-               /* realistically this will never happen unless you have an invalid program 
-                * since all C/C++ style comments start with two character liternals will
-                * validly contain those two combinations */
-               inChar = false;
-           }
+            if ( enterString ) {
+                inString = true;
+            }
+            else if ( enterChar ) {
+                inChar = true;
+            }
+            else if( inString && endString ) {
+                inString = false;
+            }
+            else if( inChar && endChar ) {
+                /* realistically this will never happen unless you have an invalid program 
+                 * since all C/C++ style comments start with two character liternals will
+                 * validly contain those two combinations */
+                inChar = false;
+            }
         }
         prev = cur;
     }
 
     /* putting the last character of the file */
-    if( !inComment && prev != EOF ) {
+    if( prev != EOF ) {
         putchar(prev); 
     }
     return 0;
